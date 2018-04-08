@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dimensions } from 'react-native';
-import { MapView } from 'expo';
+import { MapView, Permissions, Location } from 'expo';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +35,8 @@ export default class App extends React.Component {
       latitudeDelta: LATITUDE_DELTA,
       longitudeDelta: LONGITUDE_DELTA,
     },
+    locationResult: null,
+    location: {coords: { latitude: LATITUDE, longitude: LONGITUDE }},
     markers: MARKERS,
   };
 
@@ -42,12 +44,38 @@ export default class App extends React.Component {
     this.setState({ region });
   }
 
+  componentDidMount() {
+    this._getLocationAsync();
+  }
+
+  _getLocationAsync = async () => {
+    let { status } = await Permissions.askAsync(Permissions.LOCATION);
+    if (status !== 'granted') {
+      this.setState({
+        locationResult: 'Permission to access location was denied',
+        location,
+      });
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+    this.setState({ locationResult: JSON.stringify(location), location, });
+    // set state.region to current location
+    this.setState({region:{ latitude: this.state.location.coords.latitude,
+              longitude: this.state.location.coords.longitude,
+              latitudeDelta: LATITUDE_DELTA,
+              longitudeDelta: LONGITUDE_DELTA }});
+  };
+
   render() {
     return (
       <MapView
         style={{ flex: 1 }}
         region={this.state.region}
         onRegionChange={this.onRegionChange}>
+        <MapView.Marker
+          coordinate={this.state.location.coords}
+          title="My Marker"
+          description="Current Location"/>
         {this.state.markers.map((marker, i) => (
            <MapView.Marker
              key={i}
